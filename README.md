@@ -1,50 +1,34 @@
-# claude-skills
+# claude-kit
 
-A collection of skills for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Skills are folders of instructions and resources that Claude loads dynamically to improve performance on specific tasks.
+A complete [Claude Code](https://docs.anthropic.com/en/docs/claude-code) kit — agents, commands, hooks, and skills — distributed as a plugin marketplace.
 
-## What is a skill?
+## What's included
 
-A skill is a directory containing a `SKILL.md` file. Claude loads the skill's instructions when the task matches its description — either automatically or when you invoke it with `/skill-name`.
-
-```
-my-skill/
-├── SKILL.md          # Required. Instructions + frontmatter metadata.
-├── references/       # Optional. Detailed docs loaded on demand.
-├── scripts/          # Optional. Helper scripts Claude can run.
-└── assets/           # Optional. Templates, fonts, or other static files.
-```
+| Type | What it does |
+|---|---|
+| **Agents** | Subagents Claude spawns to handle specialized tasks |
+| **Commands** | Slash commands you invoke directly (e.g. `/primer`) |
+| **Hooks** | Scripts that run automatically on Claude Code events |
+| **Skills** | Invocable instruction sets for specific workflows |
 
 ## Repo structure
 
 ```
 claude-kit/
 ├── .claude/
-│   ├── agents/       # Subagents Claude can spawn
-│   ├── skills/       # Invocable skills
-│   └── settings.local.json
+│   ├── agents/       # Subagent .md files
+│   ├── commands/     # Slash command .md files
+│   ├── hooks/        # Hook scripts
+│   ├── skills/       # Skill directories, each with a SKILL.md
+│   └── settings.json # Shared permissions and hook config
 ├── .claude-plugin/
 │   └── marketplace.json
 └── template/         # Starter template for new skills
 ```
 
-The `.claude/` folder mirrors the directory structure Claude Code uses locally. To manually install everything, copy it into your project root or `~/`.
+## Install via plugin (recommended)
 
-The `SKILL.md` file uses YAML frontmatter:
-
-```markdown
----
-name: my-skill
-description: What this skill does and when Claude should use it.
----
-
-# Instructions go here
-```
-
-## Using a skill
-
-### Install via Claude Code plugin (recommended)
-
-Register this repo as a plugin marketplace, then install:
+Register this repo as a plugin marketplace:
 
 ```
 /plugin marketplace add bashirb/claude-kit
@@ -56,88 +40,96 @@ Then browse and install from the menu, or install directly:
 /plugin install bashirb-claude-kit@bashirb-claude-kit
 ```
 
-### Install manually
+## Install manually
 
 Copy the `.claude/` folder into your project root (project scope) or `~/` (user scope):
 
 ```bash
 # Project scope — available in this repo only
-cp -r .claude/agents .claude/skills /your-project/.claude/
+cp -r .claude/agents .claude/commands .claude/hooks .claude/skills /your-project/.claude/
 
 # User scope — available across all your projects
-cp -r .claude/agents ~/.claude/
-cp -r .claude/skills ~/.claude/
+cp -r .claude/agents .claude/commands .claude/hooks ~/.claude/
 ```
 
-Or install a single skill:
+## Agents
 
-```bash
-cp -r .claude/skills/pr-review ~/.claude/skills/
-```
+Subagents Claude spawns automatically or on request. Mention the task and Claude picks the right one, or reference explicitly with `@.claude/agents/<name>.md`.
 
-### Invoke a skill
+| Agent | Description |
+|---|---|
+| [code-reviewer](./.claude/agents/code-reviewer.md) | Reviews code for correctness, security, and maintainability |
+| [documentation-manager](./.claude/agents/documentation-manager.md) | Keeps README, docs/, and ARCHITECTURE.md in sync with code changes |
+| [validation-agent](./.claude/agents/validation-agent.md) | Runs tests and validation gates, iterates until all pass |
 
-Once installed, invoke it directly in Claude Code:
+## Commands
 
-```
-/pr-review
-```
+Slash commands you invoke directly in Claude Code.
 
-Claude will also auto-invoke skills when the task matches the description.
+| Command | Description |
+|---|---|
+| [/primer](./.claude/commands/primer.md) | Reads project structure, CLAUDE.md, README, and docs/ to prime context |
+| [/commit-push-pr](./.claude/commands/commit-push-pr.md) | Creates a branch, commits, pushes, and opens a PR in one step |
 
-### Invoke an agent
+## Hooks
 
-Agents are not slash commands — they are subagents Claude spawns on your behalf. Two ways to use them:
+Scripts that run automatically on Claude Code events. Configured in `.claude/settings.json`.
 
-**By name** — just describe what you want and Claude will pick the right agent:
+| Hook | Trigger | Description |
+|---|---|---|
+| [log-tool.sh](./.claude/hooks/log-tool.sh) | PostToolUse (Edit, Write, MultiEdit) | Logs file edits automatically |
 
-```
-Review src/auth.ts for security issues
-```
+## Skills
 
-**By explicit reference** — mention the agent file directly to be specific:
-
-```
-@.claude/agents/code-reviewer.md review this file
-```
-
-## Skills in this repo
+Invocable instruction sets loaded dynamically when the task matches.
 
 | Skill | Description |
 |---|---|
 | [pr-review](./.claude/skills/pr-review/) | Review a pull request for correctness, clarity, and potential issues |
 
-## Agents in this repo
+## Adding components
 
-| Agent | Description |
-|---|---|
-| [code-reviewer](./.claude/agents/code-reviewer.md) | Reviews code for correctness, security, and maintainability |
-| [documentation-manager](./.claude/agents/documentation-manager.md) | Keeps documentation in sync with code changes |
-| [validation-agent](./.claude/agents/validation-agent.md) | Runs tests and validation gates, iterates until all pass |
+### Agent
 
-## Creating a skill
+1. Create `.claude/agents/<name>.md` with YAML frontmatter:
+   ```markdown
+   ---
+   name: agent-name
+   description: "When to use this agent. Be specific."
+   tools: Read, Edit, Bash, ...
+   ---
+   ```
+2. Add the path to `agents` in `.claude-plugin/marketplace.json`
 
-Use the [template](./template/SKILL.md) as a starting point.
+### Command
 
-Key rules:
-- `name` must be lowercase, hyphen-separated, and match the directory name
-- `description` is the trigger — write it so Claude knows when to activate it
-- Keep `SKILL.md` under 500 lines; move large reference material into `references/`
-- No README inside skill folders — only what Claude needs to do the job
+1. Create `.claude/commands/<name>.md` with optional YAML frontmatter:
+   ```markdown
+   ---
+   description: What this command does
+   allowed-tools: Bash(git:*), ...
+   ---
 
-See Anthropic's [agent skills spec](https://github.com/anthropics/skills/blob/main/spec/agent-skills-spec.md) for the full specification.
+   # Instructions go here
+   ```
+2. Add the path to `commands` in `.claude-plugin/marketplace.json`
+
+### Hook
+
+1. Add your script to `.claude/hooks/`
+2. Register it in `.claude/settings.json` under the appropriate event
+
+### Skill
+
+1. Create `.claude/skills/<name>/SKILL.md` using the [template](./template/SKILL.md)
+2. Add the path to `skills` in `.claude-plugin/marketplace.json`
 
 ## Plugin command reference
 
 **Marketplace**
 
 ```
-# Add
-/plugin marketplace add bashirb/claude-kit            # from GitHub
-/plugin marketplace add https://gitlab.com/org/repo.git  # from other git host
-/plugin marketplace add ./local/path                     # from local directory
-
-# Update / Remove
+/plugin marketplace add bashirb/claude-kit
 /plugin marketplace update bashirb-claude-kit
 /plugin marketplace remove bashirb-claude-kit
 /plugin marketplace list
@@ -146,10 +138,10 @@ See Anthropic's [agent skills spec](https://github.com/anthropics/skills/blob/ma
 **Install plugins**
 
 ```
-# Interactive (lets you choose scope)
+# Interactive
 /plugin
 
-# Direct install — defaults to user scope
+# Direct install
 /plugin install bashirb-claude-kit@bashirb-claude-kit
 
 # Explicit scope via terminal
@@ -164,11 +156,6 @@ claude plugin install bashirb-claude-kit@bashirb-claude-kit --scope local
 /plugin uninstall bashirb-claude-kit@bashirb-claude-kit
 /plugin disable bashirb-claude-kit@bashirb-claude-kit
 /plugin enable bashirb-claude-kit@bashirb-claude-kit
-
-# Scope-specific uninstall via terminal
-claude plugin uninstall bashirb-claude-kit@bashirb-claude-kit --scope user
-claude plugin uninstall bashirb-claude-kit@bashirb-claude-kit --scope local
-claude plugin uninstall bashirb-claude-kit@bashirb-claude-kit --scope project
 ```
 
 **Scopes**
@@ -179,7 +166,7 @@ claude plugin uninstall bashirb-claude-kit@bashirb-claude-kit --scope project
 | `project` | Everyone on the repo | Yes (`.claude/settings.json`) | Team-wide plugins |
 | `local` | You, this repo only | No | Personal override for one repo |
 
-**Nuclear option if things get broken**
+**Nuclear option**
 
 ```bash
 rm -rf ~/.claude/plugins/cache
@@ -190,7 +177,6 @@ Then reinstall via `/plugin install`.
 ## Contributing
 
 1. Fork this repo
-2. For a new skill: copy `template/SKILL.md` into `.claude/skills/<your-skill-name>/`
-3. For a new agent: create `.claude/agents/<your-agent-name>.md`
-4. Fill in the frontmatter and instructions
-5. Open a PR with a short description of what it does and why it's useful
+2. Add your agent, command, hook, or skill following the structure above
+3. Register it in `.claude-plugin/marketplace.json`
+4. Open a PR with a short description of what it does and why it's useful
