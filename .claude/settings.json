@@ -15,7 +15,7 @@
       "Read(**/*password*)",
       "Read(**/*api_key*)",
       "Read(**/*apikey*)",
-      "Read(**/airflow.cfg)",
+      "Read(**/airflow.cfg)"
     ]
   },
   "hooks": {
